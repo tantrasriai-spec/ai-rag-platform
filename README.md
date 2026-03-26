@@ -183,3 +183,67 @@ docker-compose up --build
 Senior AI Architect | GenAI Systems | Cloud-Native Engineering
 
 ---
+
+📌 API Examples
+
+Below are sample API requests to interact with the RAG system.
+
+🔹 Upload Document
+curl -X POST "http://localhost:8000/upload" \
+  -F "file=@sample.pdf"
+
+Response:
+
+{
+  "success": true,
+  "document_id": 1,
+  "message": "File uploaded and queued for processing"
+}
+🔹 Query Documents (Hybrid Search)
+curl -X POST "http://localhost:8000/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is the summary of the document?",
+    "k": 5
+  }'
+
+Response:
+
+{
+  "results": [
+    {
+      "content": "Sample chunk text...",
+      "score": 0.89,
+      "metadata": {
+        "page": 2,
+        "document_id": 1
+      }
+    }
+  ]
+}
+🔹 Generate Answer
+
+
+file upload
+
+<img width="1087" height="672" alt="image" src="https://github.com/user-attachments/assets/8fffb052-b11a-473d-8b63-6cb7e8eede5c" />
+
+
+Documents in the dropdown 
+
+
+<img width="1188" height="762" alt="image" src="https://github.com/user-attachments/assets/342e8186-0400-4b91-be8c-57a612d5b275" />
+
+
+Chat interface 
+
+<img width="1023" height="750" alt="image" src="https://github.com/user-attachments/assets/f928f80e-de0b-410e-89dd-3371af14496e" />
+
+
+Same question : 
+
+REtrival from cache /
+
+<img width="1144" height="817" alt="image" src="https://github.com/user-attachments/assets/40218934-8e8c-4c08-8208-17501ed4ef29" />
+
+
