@@ -1,5 +1,34 @@
 # ai-rag-platform
 
+
+## 🧩 Architecture Diagram
+
+```mermaid
+flowchart LR
+
+    User --> UI["Frontend (React + Vite)"]
+
+    UI --> API["Backend API (FastAPI)"]
+
+    API --> Redis["Redis Cache"]
+    API --> OpenSearch["OpenSearch (BM25 + Vector)"]
+    API --> LLM["Vertex AI (LLM + Embeddings)"]
+
+    API --> Worker["Celery Worker"]
+
+    Worker --> OpenSearch
+    Worker --> DB["Postgres / Metadata"]
+
+    subgraph Observability
+        Prometheus --> Grafana
+    end
+
+    API --> Prometheus
+    Worker --> Prometheus
+```
+
+
+
 # AI RAG Platform (Production-Grade)
 
 A scalable Retrieval-Augmented Generation (RAG) system designed for **high-performance, low-latency, and cost-efficient AI applications**.
