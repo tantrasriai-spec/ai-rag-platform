@@ -1,0 +1,21 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+celery==5.4.0
+redis==5.0.8
+psycopg[binary]==3.2.1
+opensearch-py==2.6.0
+pydantic==2.8.2
+python-multipart==0.0.9
+
+# Step 3.2A (NEW)
+pypdf
+langchain
+langchain-community
+langchain-text-splitters
+
+langchain==0.3.0
+langchain-core==0.3.0
+langchain-google-vertexai
+google-cloud-aiplatform
+
+prometheus-fastapi-instrumentator==7.0.0

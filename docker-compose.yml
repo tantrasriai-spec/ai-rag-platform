@@ -1,0 +1,179 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: rag_postgres
+    environment:
+      POSTGRES_USER: rag
+      POSTGRES_PASSWORD: ragpass
+      POSTGRES_DB: ragdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./app/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./app/schema_uploads.sql:/docker-entrypoint-initdb.d/02-uploads.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag -d ragdb"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: rag_redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  opensearch:
+    image: opensearchproject/opensearch:2.14.0
+    container_name: rag_opensearch
+    environment:
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g
+      - DISABLE_SECURITY_PLUGIN=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    volumes:
+      - osdata:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.14.0
+    container_name: rag_os_dashboards
+    environment:
+      - OPENSEARCH_HOSTS=["http://opensearch:9200"]
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    ports:
+      - "5601:5601"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ./app
+    container_name: rag_api
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_URL=postgresql://rag:ragpass@postgres:5432/ragdb
+      - OPENSEARCH_URL=http://opensearch:9200
+      - GOOGLE_CLOUD_PROJECT=ragchat-487906
+      - GOOGLE_CLOUD_LOCATION=us-central1
+      - VERTEX_MODEL=gemini-2.5-flash
+      - VERTEX_EMBED_MODEL=text-embedding-004
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+      # optional cost config (your app can read these later)
+      - VERTEX_INPUT_COST_PER_1K=0.0
+      - VERTEX_OUTPUT_COST_PER_1K=0.0
+    volumes:
+      - uploads:/data/uploads
+      - ${APPDATA}\gcloud\application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+  worker:
+    build:
+      context: ./app
+    container_name: rag_worker
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - POSTGRES_URL=postgresql://rag:ragpass@postgres:5432/ragdb
+      - OPENSEARCH_URL=http://opensearch:9200
+      - GOOGLE_CLOUD_PROJECT=ragchat-487906
+      - GOOGLE_CLOUD_LOCATION=us-central1
+      - VERTEX_MODEL=gemini-2.5-flash
+      - VERTEX_EMBED_MODEL=text-embedding-004
+      - GOOGLE_APPLICATION_CREDENTIALS=/root/.config/gcloud/application_default_credentials.json
+    volumes:
+      - uploads:/data/uploads
+      - ${APPDATA}\gcloud\application_default_credentials.json:/root/.config/gcloud/application_default_credentials.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    command: ["celery", "-A", "celery_app.celery", "worker", "--loglevel=INFO"]
+
+  celery-exporter:
+    image: danihodovic/celery-exporter:latest
+    container_name: rag_celery_exporter
+    ports:
+      - "9808:9808"
+    depends_on:
+      redis:
+        condition: service_healthy
+    command:
+      - "--broker-url"
+      - "redis://redis:6379/0"
+      - "--port"
+      - "9808"
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: rag_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - api
+      - celery-exporter
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: rag_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafanadata:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+  ui:
+    build:
+      context: ./ui
+    container_name: rag_ui
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:
+  osdata:
+  uploads:
+  grafanadata:

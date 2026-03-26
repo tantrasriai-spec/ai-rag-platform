@@ -1,0 +1,8 @@
+body { font-family: Arial, sans-serif; background: #f6f7fb; }
+.container { max-width: 900px; margin: 40px auto; padding: 20px; }
+.card { background: white; padding: 16px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+button { padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; cursor: pointer; }
+input, select, textarea { width: 100%; padding: 8px; border-radius: 8px; border: 1px solid #ccc; }
+small { color: #666; }
+.error { color: #b00020; font-size: 13px; }
