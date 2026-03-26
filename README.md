@@ -29,7 +29,7 @@ flowchart LR
 
 
 
-# AI RAG Platform (Production-Grade)
+# AI RAG Platform 
 
 A scalable Retrieval-Augmented Generation (RAG) system designed for **high-performance, low-latency, and cost-efficient AI applications**.
 
